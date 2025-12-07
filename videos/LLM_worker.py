@@ -1,8 +1,12 @@
 import os
-import httpx
 import json
+import httpx
+import asyncio
+from config.logger import logger
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+MAX_RETRIES = 3
+TIMEOUT = 60
 
 async def call_llm(transcription):
     prompt = (
@@ -26,21 +30,47 @@ async def call_llm(transcription):
         "max_tokens": 300,
     }
 
-    async with httpx.AsyncClient(timeout=60) as client:
-        resp = await client.post("https://api.openai.com/v1/chat/completions", headers=headers, json=body)
-        resp.raise_for_status()
-        j = resp.json()
-        text = j["choices"][0]["message"]["content"]
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            logger.info("LLM call attempt %d for transcription length %d", attempt, len(transcription))
+            async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+                resp = await client.post(
+                    "https://api.openai.com/v1/chat/completions",
+                    headers=headers,
+                    json=body
+                )
+                resp.raise_for_status()
+                j = resp.json()
+                text = j["choices"][0]["message"]["content"]
 
-    try:
-        data = json.loads(text)
-    except Exception:
-        import re
-        m = re.search(r"{.*}", text, re.S)
-        if m:
-            data = json.loads(m.group(0))
-        else:
-            desc = text.split("Hook:")[0].replace("Description:", "").strip()
-            hook = text.split("Hook:")[-1].strip()
-            data = {"description": desc, "hook": hook}
-    return data
+            try:
+                data = json.loads(text)
+            except Exception:
+                import re
+                m = re.search(r"{.*}", text, re.S)
+                if m:
+                    data = json.loads(m.group(0))
+                else:
+                    desc = text.split("Hook:")[0].replace("Description:", "").strip()
+                    hook = text.split("Hook:")[-1].strip()
+                    data = {"description": desc, "hook": hook}
+
+            if "description" not in data or "hook" not in data:
+                raise ValueError(f"Invalid LLM response, missing fields: {data}")
+            if len(data["hook"].split()) != 4:
+                logger.warning("Hook does not contain 4 words, adjusting: %s", data["hook"])
+                data["hook"] = " ".join(data["hook"].split()[:4])
+
+            logger.info("LLM call successful")
+            return data
+
+        except httpx.RequestError as e:
+            logger.warning("Network error during LLM call attempt %d: %s", attempt, e)
+        except Exception as e:
+            logger.exception("Error processing LLM response attempt %d: %s", attempt, e)
+
+        if attempt < MAX_RETRIES:
+            await asyncio.sleep(2 ** attempt)
+
+    logger.error("LLM call failed after %d attempts", MAX_RETRIES)
+    raise RuntimeError("Failed to get valid response from LLM")

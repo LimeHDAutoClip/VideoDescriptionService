@@ -5,7 +5,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret")
 
-DEBUG = False  # В dev включается в local.py
+DEBUG = False
 
 ALLOWED_HOSTS = []
 
@@ -17,13 +17,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    # "rest_framework",
-    # Твои приложения (пока пусто — добавишь позже)
-    # "apps.core",
-    # "apps.videos",
-    # "apps.clips",
-    # "apps.processing",
-    # "apps.publishing",
+    "videos"
 ]
 
 MIDDLEWARE = [
