@@ -1,11 +1,14 @@
 from django.db import models
 
+
 class VideoRecord(models.Model):
     STATUS_CHOICES = [
         ('RECEIVED', 'Received'),
         ('ANALYSIS', 'Analysis'),
         ('APPROVED', 'Approved'),
         ('REJECTED', 'Rejected'),
+        ('ERROR_LLM', 'Error_LLM'),
+        ('ERROR_DOWNLOAD', 'Error_download'),
     ]
 
     video_url = models.URLField()
@@ -23,3 +26,12 @@ class VideoRecord(models.Model):
 
     def __str__(self):
         return f"{self.video_url} ({self.status})"
+
+
+class Prompt(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+    content = models.TextField()
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
