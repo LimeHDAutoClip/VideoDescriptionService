@@ -2,13 +2,23 @@ from django.db import models
 
 
 class VideoRecord(models.Model):
+    class Status:
+        RECEIVED = "RECEIVED"
+        ANALYSIS = "ANALYSIS"
+        APPROVED = "APPROVED"
+        REJECTED = "REJECTED"
+        REGENERATE = "REGENERATE"
+        ERROR_LLM = "ERROR_LLM"
+        ERROR_DOWNLOAD = "ERROR_DOWNLOAD"
+
     STATUS_CHOICES = [
-        ('RECEIVED', 'Received'),
-        ('ANALYSIS', 'Analysis'),
-        ('APPROVED', 'Approved'),
-        ('REJECTED', 'Rejected'),
-        ('ERROR_LLM', 'Error_LLM'),
-        ('ERROR_DOWNLOAD', 'Error_download'),
+        (Status.RECEIVED, "Received"),
+        (Status.ANALYSIS, "Analysis"),
+        (Status.APPROVED, "Approved"),
+        (Status.REJECTED, "Rejected"),
+        (Status.REGENERATE, "Regenerate"),
+        (Status.ERROR_LLM, "Error_LLM"),
+        (Status.ERROR_DOWNLOAD, "Error_download"),
     ]
 
     video_url = models.URLField()
@@ -16,7 +26,7 @@ class VideoRecord(models.Model):
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
-        default='RECEIVED'
+        default=Status.RECEIVED
     )
     transcription = models.TextField()
     description = models.TextField(blank=True, null=True)

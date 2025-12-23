@@ -1,9 +1,15 @@
-from rest_framework.views import APIView
-from rest_framework.response import Response
+import asyncio
+
+from django.conf import settings
 from rest_framework import status
-from videos.models import VideoRecord
-from .serializers import VideoRecordSerializer
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
 from config.logger import logger
+from videos.models import VideoRecord
+from .kafka import kafka_producer
+from .serializers import VideoRecordSerializer
+from videos.hook import insert_hook_top
 
 
 class VideoReceiveAPIView(APIView):
@@ -11,11 +17,25 @@ class VideoReceiveAPIView(APIView):
         serializer = VideoRecordSerializer(data=request.data)
         if serializer.is_valid():
             video_record = serializer.save(
-                status=VideoRecord.STATUS_CHOICES.RECEIVED
+                status=VideoRecord.Status.RECEIVED
             )
             logger.info(
                 "VideoRecord created id=%s url=%s", video_record.id, video_record.video_url
             )
+
+            payload = {
+                "id": video_record.id,
+                "video_url": video_record.video_url,
+                "transcription": video_record.transcription,
+                "status": video_record.status,
+            }
+            if settings.ENABLE_KAFKA_PRODUCER:
+                asyncio.create_task(
+                    kafka_producer.send_json(settings.KAFKA_TOPIC_VIDEOS, payload)
+                )
+            else:
+                logger.info("Kafka producer disabled, skipping send for id=%s", video_record.id)
+
             return Response(VideoRecordSerializer(video_record).data, status=status.HTTP_201_CREATED)
 
         logger.warning("Failed to create VideoRecord: %s", serializer.errors)
@@ -24,7 +44,7 @@ class VideoReceiveAPIView(APIView):
 
 class VideoAnalysisListAPIView(APIView):
     def get(self):
-        videos = VideoRecord.objects.filter(status="ANALYS").order_by("created_at")
+        videos = VideoRecord.objects.filter(status=VideoRecord.Status.ANALYSIS).order_by("created_at")
         serializer = VideoRecordSerializer(videos, many=True)
         logger.info("Fetched %d videos for analysis", len(videos))
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -44,16 +64,16 @@ class VideoAnalysisActionAPIView(APIView):
             return Response({"error": "Invalid action"}, status=status.HTTP_400_BAD_REQUEST)
 
         if action == "approve":
-            video.status = "APPROVED"
+            video.status = VideoRecord.Status.APPROVED
             logger.info("VideoRecord id=%s approved", pk)
-            # монтаж видео
+            insert_hook_top(video.video_path, ".../videos/processed/", video.hook)
         else:
             regenerate = request.data.get("regenerate", False)
             if regenerate:
-                video.status = "REGENERATE"
+                video.status = VideoRecord.Status.REGENERATE
                 logger.info("VideoRecord id=%s marked for regeneration", pk)
             else:
-                video.status = "REJECTED"
+                video.status = VideoRecord.Status.REJECTED
                 logger.info("VideoRecord id=%s rejected", pk)
 
         video.save()

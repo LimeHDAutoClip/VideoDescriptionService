@@ -5,7 +5,7 @@ from pathlib import Path
 from config.logger import logger
 
 MAX_RETRIES = 3
-SAVE_DIR = "media/videos"
+SAVE_DIR = ".../videos/processed/"
 
 async def download_video(video_url, save_dir=SAVE_DIR):
     Path(save_dir).mkdir(parents=True, exist_ok=True)
@@ -31,7 +31,7 @@ async def download_video(video_url, save_dir=SAVE_DIR):
         except Exception as e:
             logger.warning("Attempt %d failed for video '%s': %s", attempt, video_url, e)
             if attempt < MAX_RETRIES:
-                await asyncio.sleep(2 ** attempt)  # экспоненциальная пауза
+                await asyncio.sleep(2 ** attempt)
             else:
                 logger.error("Failed to download video after %d attempts: %s", MAX_RETRIES, video_url)
                 raise
