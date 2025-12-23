@@ -96,7 +96,10 @@ CELERY_RESULT_SERIALIZER = "json"
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TIMEZONE = "UTC"
 
-KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
+KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092").split(",")
+KAFKA_TOPIC_VIDEOS = os.getenv("KAFKA_TOPIC_VIDEOS", "video_links")
+KAFKA_GROUP_ID = os.getenv("KAFKA_GROUP_ID", "video_service_group")
+ENABLE_KAFKA_PRODUCER = os.getenv("ENABLE_KAFKA_PRODUCER", "true").lower() == "true"
 
 REAP_API_URL = os.getenv("REAP_API_URL")
 REAP_API_KEY = os.getenv("REAP_API_KEY")
