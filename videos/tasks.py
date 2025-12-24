@@ -4,7 +4,7 @@ from celery import shared_task
 from django.utils import timezone
 
 from config.logger import logger
-from videos.LLM_worker import call_llm
+from videos.llm.mock import call_llm
 from videos.download import download_video
 from videos.models import VideoRecord
 
@@ -16,7 +16,8 @@ def process_video_task(self, record_id: int):
         try:
             file_path = asyncio.run(download_video(record.video_url))
             record.video_path = file_path
-            record.save(update_fields=["video_path"])
+            record.status = VideoRecord.Status.DOWNLOADED
+            record.save(update_fields=["video_path", "status"])
             logger.info("Downloaded video for record %s -> %s", record_id, file_path)
         except Exception as e:
             logger.exception("Download failed for record %s: %s", record_id, e)
@@ -39,6 +40,8 @@ def process_video_task(self, record_id: int):
 
         except Exception as e:
             logger.exception("LLM failed for record %s: %s", record_id, e)
+            record.status = VideoRecord.Status.ERROR_LLM
+            record.save(update_fields=["status"])
             try:
                 raise self.retry(exc=e)
             except self.MaxRetriesExceededError:

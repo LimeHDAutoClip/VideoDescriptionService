@@ -1,15 +1,12 @@
-import asyncio
-
-from django.conf import settings
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from config.logger import logger
 from videos.models import VideoRecord
-from .kafka import kafka_producer
 from .serializers import VideoRecordSerializer
 from videos.hook import insert_hook_top
+from videos.tasks import process_video_task
 
 
 class VideoReceiveAPIView(APIView):
@@ -23,27 +20,19 @@ class VideoReceiveAPIView(APIView):
                 "VideoRecord created id=%s url=%s", video_record.id, video_record.video_url
             )
 
-            payload = {
-                "id": video_record.id,
-                "video_url": video_record.video_url,
-                "transcription": video_record.transcription,
-                "status": video_record.status,
-            }
-            if settings.ENABLE_KAFKA_PRODUCER:
-                asyncio.create_task(
-                    kafka_producer.send_json(settings.KAFKA_TOPIC_VIDEOS, payload)
-                )
-            else:
-                logger.info("Kafka producer disabled, skipping send for id=%s", video_record.id)
+            process_video_task.delay(video_record.id)
 
-            return Response(VideoRecordSerializer(video_record).data, status=status.HTTP_201_CREATED)
+            return Response(
+                VideoRecordSerializer(video_record).data,
+                status=status.HTTP_201_CREATED
+            )
 
         logger.warning("Failed to create VideoRecord: %s", serializer.errors)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class VideoAnalysisListAPIView(APIView):
-    def get(self):
+    def get(self, request):
         videos = VideoRecord.objects.filter(status=VideoRecord.Status.ANALYSIS).order_by("created_at")
         serializer = VideoRecordSerializer(videos, many=True)
         logger.info("Fetched %d videos for analysis", len(videos))
@@ -53,7 +42,7 @@ class VideoAnalysisListAPIView(APIView):
 class VideoAnalysisActionAPIView(APIView):
     def post(self, request, pk):
         try:
-            video = VideoRecord.objects.get(pk=pk)
+            video = VideoRecord.objects.get(id=pk)
         except VideoRecord.DoesNotExist:
             logger.warning("VideoRecord not found for id=%s", pk)
             return Response({"error": "VideoRecord not found"}, status=status.HTTP_404_NOT_FOUND)
@@ -66,7 +55,7 @@ class VideoAnalysisActionAPIView(APIView):
         if action == "approve":
             video.status = VideoRecord.Status.APPROVED
             logger.info("VideoRecord id=%s approved", pk)
-            insert_hook_top(video.video_path, ".../videos/processed/", video.hook)
+            insert_hook_top(video.video_path, video.video_path.replace("processed", "hooked"), video.hook)
         else:
             regenerate = request.data.get("regenerate", False)
             if regenerate:

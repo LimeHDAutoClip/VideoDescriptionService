@@ -5,7 +5,7 @@ from pathlib import Path
 from config.logger import logger
 
 MAX_RETRIES = 3
-SAVE_DIR = ".../videos/processed/"
+SAVE_DIR = "videos/processed/"
 
 async def download_video(video_url, save_dir=SAVE_DIR):
     Path(save_dir).mkdir(parents=True, exist_ok=True)
