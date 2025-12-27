@@ -1,4 +1,6 @@
-from moviepy.editor import VideoFileClip, ImageClip, CompositeVideoClip
+from moviepy.video.io.VideoFileClip import VideoFileClip
+from moviepy.video.VideoClip import ImageClip
+from moviepy.video.compositing.CompositeVideoClip import CompositeVideoClip
 from PIL import Image, ImageDraw, ImageFont
 import textwrap
 import tempfile

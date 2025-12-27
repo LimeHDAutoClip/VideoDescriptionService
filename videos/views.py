@@ -20,7 +20,7 @@ class VideoReceiveAPIView(APIView):
                 "VideoRecord created id=%s url=%s", video_record.id, video_record.video_url
             )
 
-            process_video_task.delay()
+            process_video_task.delay(record_id=video_record.id)
 
             return Response(
                 VideoRecordSerializer(video_record).data,
