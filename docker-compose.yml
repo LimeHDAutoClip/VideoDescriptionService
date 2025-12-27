@@ -1,0 +1,72 @@
+version: "3.9"
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: video_description_web
+    restart: always
+    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000
+    environment:
+      PYTHONUNBUFFERED: "1"
+    env_file:
+      - .env
+    ports:
+      - "8003:8000"
+    depends_on:
+      - db_description
+      - redis
+    networks:
+      - backend-net
+      - kafka-net
+
+  celery:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: video_description_celery
+    restart: always
+    command: celery -A config worker -l info -P solo
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - db_description
+    networks:
+      - backend-net
+      - kafka-net
+
+  redis:
+    image: redis:7
+    container_name: video_description_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    networks:
+      - backend-net
+
+  db_description:
+    image: postgres:16
+    container_name: db_description
+    restart: always
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    ports:
+      - "5435:5432"
+    networks:
+      - backend-net
+
+volumes:
+  postgres_data:
+
+networks:
+  kafka-net:
+    external: true
+    name: shared-kafka-net
+  backend-net:
+    driver: bridge

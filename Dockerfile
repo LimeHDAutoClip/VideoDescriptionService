@@ -1,5 +1,10 @@
 FROM python:3.12-slim
 
+# Отключаем буферизацию логов
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Системные зависимости
 RUN apt-get update && apt-get install -y \
     gcc \
     libpq-dev \
@@ -7,10 +12,17 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
+# Сначала зависимости (кеш Docker)
 COPY requirements.txt .
 
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
 
-COPY . /app/
+# Копируем код
+COPY . .
 
-CMD ["sh", "-c", "python manage.py migrate && gunicorn video_processor.wsgi:application --bind 0.0.0.0:8000"]
+# entrypoint
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
