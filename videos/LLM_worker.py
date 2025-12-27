@@ -66,10 +66,10 @@ async def call_llm(transcription: str) -> dict:
             if "description" not in result or "hook" not in result:
                 raise ValueError(f"Invalid LLM response: {result}")
 
-            # Гарантия 4 слов
+            # Гарантия 3 слов
             hook_words = result["hook"].split()
-            if len(hook_words) != 4:
-                logger.warning("Hook not 4 words, trimming: %s", result["hook"])
+            if len(hook_words) != 3:
+                logger.warning("Hook not 3 words, trimming: %s", result["hook"])
                 result["hook"] = " ".join(hook_words[:4])
 
             logger.info("LLM call successful")

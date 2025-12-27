@@ -4,7 +4,7 @@ from celery import shared_task
 from django.utils import timezone
 
 from config.logger import logger
-from videos.llm.mock import call_llm
+from videos.LLM_worker import call_llm
 from videos.download import download_video
 from videos.models import VideoRecord
 

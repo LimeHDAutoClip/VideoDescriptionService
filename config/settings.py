@@ -54,11 +54,11 @@ ASGI_APPLICATION = "config.asgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.getenv("POSTGRES_DB", "db"),
-        "USER": os.getenv("POSTGRES_USER", "postgres"),
-        "PASSWORD": os.getenv("POSTGRES_PASSWORD", "Kapral666"),
-        "HOST": os.getenv("POSTGRES_HOST", "localhost"),
-        "PORT": os.getenv("POSTGRES_PORT", "5432"),
+        "NAME": os.getenv("DB_NAME", "db"),
+            "USER": os.getenv("DB_USER", "postgres"),
+        "PASSWORD": os.getenv("DB_PASSWORD", "Kapral666"),
+        "HOST": os.getenv("DB_HOST", "localhost"),
+        "PORT": os.getenv("DB_PORT", "5432"),
     }
 }
 
@@ -100,14 +100,8 @@ CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
 
 
 KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092").split(",")
-KAFKA_TOPIC_VIDEOS = os.getenv("KAFKA_TOPIC_VIDEOS", "video_links")
-KAFKA_GROUP_ID = os.getenv("KAFKA_GROUP_ID", "video_service_group")
-ENABLE_KAFKA_PRODUCER = os.getenv("ENABLE_KAFKA_PRODUCER", "true").lower() == "true"
+KAFKA_TOPIC = os.getenv("KAFKA_TOPIC", "video.transcribed")
 
-REAP_API_URL = os.getenv("REAP_API_URL")
-REAP_API_KEY = os.getenv("REAP_API_KEY")
-
-MAKE_API_URL = os.getenv("MAKE_API_URL")
 
 FFMPEG_BIN = os.getenv("FFMPEG_BIN", "ffmpeg")
 

@@ -5,7 +5,7 @@ from rest_framework.views import APIView
 from config.logger import logger
 from videos.models import VideoRecord
 from .serializers import VideoRecordSerializer
-from videos.hook import insert_hook_top
+from videos.hook import insert_hook
 from videos.tasks import process_video_task
 
 
@@ -20,7 +20,7 @@ class VideoReceiveAPIView(APIView):
                 "VideoRecord created id=%s url=%s", video_record.id, video_record.video_url
             )
 
-            process_video_task.delay(video_record.id)
+            process_video_task.delay()
 
             return Response(
                 VideoRecordSerializer(video_record).data,
@@ -55,7 +55,11 @@ class VideoAnalysisActionAPIView(APIView):
         if action == "approve":
             video.status = VideoRecord.Status.APPROVED
             logger.info("VideoRecord id=%s approved", pk)
-            insert_hook_top(video.video_path, video.video_path.replace("processed", "hooked"), video.hook)
+            insert_hook(
+                video.video_path,
+                video.video_path.replace("processed", "hooked"),
+                video.hook
+            )
         else:
             regenerate = request.data.get("regenerate", False)
             if regenerate:
