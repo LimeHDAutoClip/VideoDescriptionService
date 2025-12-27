@@ -10,6 +10,7 @@ from videos.models import VideoRecord
 @shared_task(bind=True, max_retries=3, default_retry_delay=60)
 def process_video_task(self, record_id: int):
     try:
+        logger.info("process_video_task")
         record = VideoRecord.objects.get(id=record_id)
         transcription = record.transcription
         try:

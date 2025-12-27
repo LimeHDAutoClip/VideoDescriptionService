@@ -2,14 +2,13 @@ version: "3.9"
 
 services:
   web:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: .
     container_name: video_description_web
     restart: always
-    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000
-    environment:
-      PYTHONUNBUFFERED: "1"
+    # Сначала миграции, потом запуск сервера
+    command: >
+      sh -c "python manage.py migrate && 
+             gunicorn config.wsgi:application --bind 0.0.0.0:8000"
     env_file:
       - .env
     ports:
@@ -22,12 +21,11 @@ services:
       - kafka-net
 
   celery:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: .
     container_name: video_description_celery
     restart: always
-    command: celery -A config worker -l info -P solo
+    # Теперь этот command действительно выполнится!
+    command: celery -A config worker -l info -P prefork
     env_file:
       - .env
     depends_on:
@@ -40,16 +38,12 @@ services:
   redis:
     image: redis:7
     container_name: video_description_redis
-    restart: always
-    ports:
-      - "6379:6379"
     networks:
       - backend-net
 
   db_description:
     image: postgres:16
     container_name: db_description
-    restart: always
     environment:
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USER}

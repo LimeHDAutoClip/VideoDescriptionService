@@ -1,11 +1,7 @@
 #!/bin/sh
 set -e
 
-echo "Apply migrations..."
-python manage.py migrate
-
-echo "Start gunicorn..."
-exec gunicorn config.wsgi:application \
-    --bind 0.0.0.0:8000 \
-    --workers 3 \
-    --timeout 120
+# Убираем отсюда миграции, чтобы они не запускались
+# в каждом контейнере одновременно.
+# $@ — это запуск команды, переданной из docker-compose (command)
+exec "$@"
