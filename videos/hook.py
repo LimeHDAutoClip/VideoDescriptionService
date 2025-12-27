@@ -71,13 +71,14 @@ def insert_hook(input_path: str, output_path: str, hook_text: str):
 
     text_clip = (
         ImageClip(tmp.name)
-        .set_duration(video.duration)
-        .set_position("center")
+        .with_duration(video.duration)
+        .with_position("center")
     )
 
     final = CompositeVideoClip([video, text_clip])
 
-    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+    save_dir = "videos/hooked/"
+    Path(save_dir).mkdir(parents=True, exist_ok=True)
 
     final.write_videofile(
         output_path,

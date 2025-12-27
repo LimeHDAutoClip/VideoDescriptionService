@@ -1,3 +1,5 @@
+import asyncio
+
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -7,6 +9,7 @@ from videos.models import VideoRecord
 from .serializers import VideoRecordSerializer
 from videos.hook import insert_hook
 from videos.tasks import process_video_task
+from videos.download import download_video
 
 
 class VideoReceiveAPIView(APIView):
@@ -55,11 +58,25 @@ class VideoAnalysisActionAPIView(APIView):
         if action == "approve":
             video.status = VideoRecord.Status.APPROVED
             logger.info("VideoRecord id=%s approved", pk)
+            record = VideoRecord.objects.get(id=pk)
+
+            try:
+                file_path = asyncio.run(download_video(record.video_url))
+                record.video_path = file_path
+                record.save(update_fields=["video_path"])
+                logger.info("Downloaded video for record %s -> %s", record.id, file_path)
+            except Exception as e:
+                logger.exception("Download failed for record %s: %s", record.id, e)
+                record.status = VideoRecord.Status.ERROR_DOWNLOAD
+                record.save(update_fields=["status"])
+                return
+
             insert_hook(
                 video.video_path,
                 video.video_path.replace("processed", "hooked"),
                 video.hook
             )
+            logger.info("VideoRecord id=%s hooked", pk)
         else:
             regenerate = request.data.get("regenerate", False)
             if regenerate:

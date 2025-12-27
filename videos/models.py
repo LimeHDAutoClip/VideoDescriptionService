@@ -4,7 +4,6 @@ from django.db import models
 class VideoRecord(models.Model):
     class Status:
         RECEIVED = "RECEIVED"
-        DOWNLOADED = "DOWNLOADED"
         ANALYSIS = "ANALYSIS"
         APPROVED = "APPROVED"
         REJECTED = "REJECTED"
@@ -14,7 +13,6 @@ class VideoRecord(models.Model):
 
     STATUS_CHOICES = [
         (Status.RECEIVED, "Received"),
-        (Status.DOWNLOADED, "Downloaded"),
         (Status.ANALYSIS, "Analysis"),
         (Status.APPROVED, "Approved"),
         (Status.REJECTED, "Rejected"),
